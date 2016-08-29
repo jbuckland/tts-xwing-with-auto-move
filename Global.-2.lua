@@ -40,8 +40,15 @@ evade = nil --'4a352e'
 stress = nil --'a25e12'
 target = nil --'c81580'
 
+function debug(msg)
+    local debug = true
+    if(debug) then
+        print(msg)
+    end
+end
 
 function onload(save_string)
+    debug("John's XWing Table")
     if save_string ~= "" then
         local data = JSON.decode(save_string)
         for i, card in pairs(data) do
