@@ -149,6 +149,7 @@ function onObjectEnterScriptingZone(zone, object)
     end
 end
 
+--is the owners hand within 2 units of this object?
 function PlayerCheck(Color, GUID)
     local PC = false
     if getPlayer(Color) ~= nil then
