@@ -4,6 +4,19 @@
 -- X-Wing Auto Tokens - Hera Verito (Jstek), March 2016
 -- X-Wing Auto Bump Rewrite of Movement Code - Flolania, May 2016
 
+-- August 2016:
+-- - Disabled printing "This dial was not saved" since it was triggered by ANYTHING
+-- - Changed autolock feature (setlock) to nudge ship down instead of triggering in-air
+-- - Added shuffle-on-load to damage decks (external script)
+-- - Changed ruler to more accurate version (to be tested)
+-- TO_DO:
+-- - Change all GUID handling to object reference handling
+-- - Separate "Auto Dial" functionality from movement functionality
+-- - Change big base ship detection to more structured one
+-- - Change thousand-if-else trees into a nice extensible table holding cases and responses
+-- - Figure out how to shift most functionality OUT of update() called each frame....
+-- - Finally, make this a contained enitity with proper API, event calls etc.
+
 --UndoData
 UndoInfo = {}
 
@@ -29,9 +42,7 @@ target = nil --'c81580'
 
 
 function onload(save_string)
-    print("onload called!")
     if save_string ~= "" then
-        print("save_string = " .. save_string)
         local data = JSON.decode(save_string)
         for i, card in pairs(data) do
             local cardtable = {}
@@ -122,7 +133,7 @@ function onObjectLeaveScriptingZone(zone, object)
                 object.setVar('Lock',true)
             end
     	else
-            printToColor('That dial was not saved.', object.held_by_color, {0.2,0.2,0.8})
+            --printToColor('That dial was not saved.', object.held_by_color, {0.2,0.2,0.8})
         end
     end
 end
@@ -151,7 +162,7 @@ function PlayerCheck(Color, GUID)
             if CardData["LeftZone"] == true then
                 PC = true
             else
-                printToColor('Due to TTS Bug -- cannot use buttons down here. Unlock. Drag to main play area and click buttons there.', CardData["Color"], {0.4,0.6,0.2})
+                printToColor('Cannot use buttons down here. Unlock. Drag to main play area and click buttons there.', CardData["Color"], {0.4,0.6,0.2})
             end
         end
     end
@@ -508,7 +519,7 @@ function checkdials(guid)
     if error == true then
         printToAll('Caution: Cannot save dials in main play area.',{0.2,0.2,0.8})
     end
-    if count <= 17 then
+    if count <= 20 then
         printToAll(count .. ' dials saved for ' .. obj.getName() .. '.', {0.2,0.2,0.8})
     else
         resetdials(guid,0)
@@ -584,8 +595,12 @@ function update ()
             check(shipguid,shipdesc)
         end
         if ship.getVar('Lock') == true and ship.held_by_color == nil and ship.resting == true then
-            ship.setVar('Lock',false)
-            ship.lock()
+            if ship.getPosition()['y'] <= 1.5 then
+                ship.setVar('Lock',false)
+                ship.lock()
+            else
+                ship.setPositionSmooth({ship.getPosition()['x'], ship.getPosition()['y']-0.1, ship.getPosition()['z']})
+            end
         end
         if ship.getVar('Token') == true and ship.held_by_color == nil and ship.resting == true then
             ship.setVar('Token',false)
@@ -773,7 +788,7 @@ function CloakMoves(toCheck)
     end
 end
 
-function ruler(guid,action)
+function ruler_old(guid,action)
     -- action for 1 for display button 2 for not
     local shipobject = getObjectFromGUID(guid)
     local shipname = shipobject.getName()
@@ -793,6 +808,46 @@ function ruler(guid,action)
     else
         custom.mesh = 'http://pastebin.com/raw/wkfqqnwX'
         custom.collider = 'https://paste.ee/r/6jn13'
+    end
+    newruler.setCustomObject(custom)
+    newruler.lock()
+    newruler.scale(scale)
+    setpending(guid)
+    if action == 2 then
+        return newruler
+    else
+        local button = {['click_function'] = 'actionButton', ['label'] = 'Remove', ['position'] = {0, 0.5, 0}, ['rotation'] =  {0, 0, 0}, ['width'] = 1300, ['height'] = 1300, ['font_size'] = 250}
+        newruler.createButton(button)
+    end
+    notify(guid,'r')
+end
+
+function ruler(guid,action)
+    -- action for 1 for display button 2 for not
+    local shipobject = getObjectFromGUID(guid)
+    local shipname = shipobject.getName()
+    local direction = shipobject.getRotation()
+    local world = shipobject.getPosition()
+    local scale = shipobject.getScale()
+
+    local obj_parameters = {}
+    obj_parameters.type = 'Custom_Model'
+    obj_parameters.position = {world[1], world[2]+0.06, world[3]}
+    obj_parameters.rotation = { 0, direction[2] +180, 0 }
+    local newruler = spawnObject(obj_parameters)
+    local custom = {}
+    if isBigShip(guid) == true then
+        --custom.mesh = 'http://pastebin.com/raw/3AU6BBjZ'
+        custom.mesh = 'https://paste.ee/r/9uhlG'
+        custom.diffuse = 'http://i.imgur.com/8YupgGf.png'
+        --custom.collider = 'https://paste.ee/r/JavTd'
+        custom.collider = 'https://paste.ee/r/DQ1ip'
+    else
+        --custom.mesh = 'http://pastebin.com/raw/wkfqqnwX'
+        custom.mesh = 'https://paste.ee/r/9uhlG'
+        custom.diffuse = 'http://i.imgur.com/MAtF9s9.png'
+        --custom.collider = 'https://paste.ee/r/6jn13'
+        custom.collider = 'https://paste.ee/r/DQ1ip'
     end
     newruler.setCustomObject(custom)
     newruler.lock()
@@ -875,6 +930,8 @@ function check(guid,move)
         -- Ruler Commands
     if move == 'r' or move == 'ruler' then
         ruler(guid,1)
+    elseif move == 'rr' then
+        ruler_old(guid,1)
 
         -- Auto Dial Commands
     elseif move == 'sd' or move == 'storedial' or move == 'storedials' then
@@ -1086,6 +1143,7 @@ function MiscMovement(guid,forwardDistance,type,direction,move,text)
     storeundo(guid,move)
     tokens(guid, 1)
     local obj = getObjectFromGUID(guid)
+    obj.unlock()
     local sidewaysDistance = 0
     if type == 1 then
         --barrel roll
@@ -1174,6 +1232,7 @@ function turnShip(guid,radius,direction,type,kturn,move,text)
     storeundo(guid,move)
     tokens(guid, 1)
     local obj = getObjectFromGUID(guid)
+    obj.unlock()
     local rot = obj.getRotation()
     local pos = obj.getPosition()
     local degree = {}
@@ -1255,6 +1314,7 @@ function straight(guid,forwardDistance,kturn,move,text)
     storeundo(guid,move)
     tokens(guid, 1)
     local obj = getObjectFromGUID(guid)
+    obj.unlock()
     local pos = obj.getPosition()
     local rot = obj.getRotation()
     if isBigShip(guid) == true then
