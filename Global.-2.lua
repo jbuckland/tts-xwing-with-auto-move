@@ -70,7 +70,7 @@ function onload(save_string)
                 cardtable["LeftZone"] = false
                 cardtable["HasButtons"] = false
                 obj.Unlock()
-                obj.clearButtons()
+                RemoveAllButtons(obj)
                 obj.setPosition ({card["Positionx"],card["Positiony"],card["Positionz"]})
                 obj.setRotation ({card["Rotationx"],card["Rotationy"],card["Rotationz"]})
                 obj.setVar('Lock',false)
@@ -177,6 +177,7 @@ function PlayerCheck(Color, GUID)
     return PC
 end
 
+--get the index in dialpositions of the object with the matching GUID
 function CardInArray(GUID)
     local CIAPos = nil
     for i, card in ipairs(dialpositions) do
@@ -192,7 +193,7 @@ function CardFlipButton(object)
     local CardData = dialpositions[CardInArray(object.GetGUID())]
     if PlayerCheck(CardData["Color"],CardData["GUID"]) == true then
         object.setRotation({0,CardData["Rotation"][2],0})
-        object.clearButtons()
+        RemoveAllButtons(object)
         local movebutton = {['click_function'] = 'CardMoveButton', ['label'] = 'Move', ['position'] = {-0.32, 1, 1}, ['rotation'] =  {0, 0, 0}, ['width'] = 750, ['height'] = 530, ['font_size'] = 250}
         object.createButton(movebutton)
         local actionbuttonbefore = {['click_function'] = 'CardActionButtonBefore', ['label'] = 'A', ['position'] = {-0.9, 1, 0}, ['rotation'] =  {0, 0, 0}, ['width'] = 200, ['height'] = 530, ['font_size'] = 250}
@@ -204,7 +205,7 @@ function CardMoveButton(object)
     local CardData = dialpositions[CardInArray(object.GetGUID())]
     if PlayerCheck(CardData["Color"],CardData["GUID"]) == true then
         check(CardData["ShipGUID"],object.getDescription())
-        object.clearButtons()
+        RemoveAllButtons(object)
         CardData["BoostDisplayed"] = false
         CardData["BarrelRollDisplayed"] = false
         local actionbuttonafter = {['click_function'] = 'CardActionButtonAfter', ['label'] = 'A', ['position'] = {-0.9, 1, 0}, ['rotation'] =  {0, 0, 0}, ['width'] = 200, ['height'] = 530, ['font_size'] = 250}
@@ -441,7 +442,7 @@ function CardDeleteButton(object)
     if PlayerCheck(CardData["Color"],CardData["GUID"]) == true then
         getObjectFromGUID(CardData["ShipGUID"]).setVar('HasDial',false)
         object.Unlock()
-        object.clearButtons()
+        RemoveAllButtons(object)
         DeleteMoveButtons(getObjectFromGUID(CardData["ShipGUID"]))
         object.setPosition (CardData["Position"])
         object.setRotation (CardData["Rotation"])
@@ -573,12 +574,12 @@ end
 
 function MoveForward(object)
     MiscMovement(object.getGUID(),0.362,4,2,'tinyfoward',nil)
-    object.clearButtons()
+    RemoveAllButtons(object)
 end
 
 function MoveBackward(object)
     MiscMovement(object.getGUID(),-0.362,4,3,'tinybackward',nil)
-    object.clearButtons()
+    RemoveAllButtons(object)
 end
 
 function DeleteMoveButtons(object)
@@ -588,6 +589,16 @@ function DeleteMoveButtons(object)
             if button.label == 'Front' or button.label == 'Back' then
                 object.removeButton(button.index)
             end
+        end
+    end
+
+end
+
+function RemoveAllButtons(object)
+    --this is a workaround for obj.clearButtons() being broken as of v7.10
+    if object.getButtons() ~= nil then
+        for i, button in pairs(object.getButtons()) do
+            object.removeButton(button.index)
         end
     end
 
