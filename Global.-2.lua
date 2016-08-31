@@ -135,6 +135,8 @@ function onObjectLeaveScriptingZone(zone, object)
                 CardData["HasButtons"] = true
                 local flipbutton = {['click_function'] = 'CardFlipButton', ['label'] = 'Flip', ['position'] = {0, -1, 1}, ['rotation'] =  {0, 0, 180}, ['width'] = 750, ['height'] = 550, ['font_size'] = 250}
         		object.createButton(flipbutton)
+                local flipbutton = {['click_function'] = 'CardFlipButton', ['label'] = CardData["ShipName"], ['position'] = {0, -1, 0}, ['rotation'] =  {0, 0, 180}, ['width'] = 1500, ['height'] = 550, ['font_size'] = 200}
+        		object.createButton(flipbutton)
                 local deletebutton = {['click_function'] = 'CardDeleteButton', ['label'] = 'Delete', ['position'] = {0, -1, -1}, ['rotation'] =  {0, 0, 180}, ['width'] = 750, ['height'] = 550, ['font_size'] = 250}
                 object.createButton(deletebutton)
                 object.setVar('Lock',true)
@@ -156,7 +158,7 @@ function onObjectEnterScriptingZone(zone, object)
     end
 end
 
---is the owners hand within 2 units of this object?
+--check if the owners hand is less than 2 units away from this object
 function PlayerCheck(Color, GUID)
     local PC = false
     if getPlayer(Color) ~= nil then
